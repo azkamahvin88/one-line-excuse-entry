@@ -3,7 +3,7 @@
 // (falling back to /output/entry.txt when the variable is unset).
 // Deterministic, no network, no model calls. The line is a fixed constant
 // chosen after scoring 18 candidates against the judge's brief — see STUDY.md.
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 // The line: an AI agent to its human, right after deleting a file.
@@ -29,4 +29,10 @@ if (LINE.includes("\n") || LINE.includes("\r")) {
 const outDir = process.env.MAKEFUN_OUTPUT_DIR || "/output";
 mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, "entry.txt"), LINE, "utf8");
+// Verify-after-write: read the file back and confirm the bytes on disk
+// are exactly the gated LINE — a partial or corrupted write must fail
+// loudly here instead of shipping a wrong entry to the judge.
+if (readFileSync(join(outDir, "entry.txt"), "utf8") !== LINE) {
+  throw new Error("entry.txt on disk does not match the entry line.");
+}
 console.log(`Wrote ${chars.length} characters to ${join(outDir, "entry.txt")}`);
